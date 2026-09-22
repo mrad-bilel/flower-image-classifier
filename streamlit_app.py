@@ -1,3 +1,14 @@
+# ============================================================
+# streamlit_app.py
+#
+# Flower image classifier using Streamlit
+# ============================================================
+
+
+# ============================================================
+# 1. IMPORT LIBRARIES
+# ============================================================
+
 import json
 from pathlib import Path
 
@@ -5,54 +16,99 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import tensorflow as tf
+
 from PIL import Image
 
+
 # ============================================================
-# CONFIGURATION
+# 2. APPLICATION PATHS
 # ============================================================
 
 APP_DIR = Path(__file__).resolve().parent
-MODEL_PATH = APP_DIR / "flower_classifier.h5"
-CLASS_NAMES_PATH = APP_DIR / "class_names.json"
+
+MODEL_PATH = (
+    APP_DIR
+    /
+    "flower_classifier.keras"
+)
+
+CLASS_NAMES_PATH = (
+    APP_DIR
+    /
+    "class_names.json"
+)
+
+
+# ============================================================
+# 3. IMAGE CONFIGURATION
+# ============================================================
 
 IMG_WIDTH = 160
+
 IMG_HEIGHT = 160
 
 
 # ============================================================
-# STREAMLIT PAGE
+# 4. STREAMLIT PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
+
     page_title="Flower Image Classifier",
+
     page_icon="🌸",
-    layout="centered",
-)
 
-st.title("🌸 Flower Image Classifier")
+    layout="centered"
 
-st.write(
-    "Upload a flower image and the trained MobileNetV2 classifier "
-    "will predict the flower class."
 )
 
 
 # ============================================================
-# LOAD CLASS NAMES
+# 5. PAGE TITLE
+# ============================================================
+
+st.title(
+    "🌸 Flower Image Classifier"
+)
+
+
+st.write(
+    "Upload a flower image and the trained "
+    "MobileNetV2 classifier will predict "
+    "the flower class."
+)
+
+
+# ============================================================
+# 6. LOAD CLASS NAMES
 # ============================================================
 
 def load_class_names():
-    if CLASS_NAMES_PATH.exists():
-        with open(CLASS_NAMES_PATH, "r", encoding="utf-8") as file:
-            return json.load(file)
 
-    # Fallback for the TensorFlow Flowers dataset
+    if CLASS_NAMES_PATH.exists():
+
+        with open(
+            CLASS_NAMES_PATH,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            return json.load(
+                file
+            )
+
     return [
+
         "daisy",
+
         "dandelion",
+
         "roses",
+
         "sunflowers",
-        "tulips",
+
+        "tulips"
+
     ]
 
 
@@ -60,186 +116,436 @@ CLASS_NAMES = load_class_names()
 
 
 # ============================================================
-# LOAD MODEL
+# 7. CHECK MODEL FILE EXISTS
+# ============================================================
+
+if not MODEL_PATH.exists():
+
+    st.error(
+
+        "Model file not found.\n\n"
+        "Expected file:\n\n"
+        "flower_classifier.keras"
+
+    )
+
+    st.stop()
+
+
+# ============================================================
+# 8. LOAD MODEL
 # ============================================================
 
 @st.cache_resource
 def load_model():
-    if not MODEL_PATH.exists():
-        return None
 
-    return tf.keras.models.load_model(
+    loaded_model = tf.keras.models.load_model(
+
         MODEL_PATH,
-        compile=False,
+
+        compile=False
+
     )
 
+    return loaded_model
 
-model = load_model()
+
+try:
+
+    model = load_model()
 
 
-# ============================================================
-# CHECK MODEL
-# ============================================================
+except Exception as error:
 
-if model is None:
     st.error(
-        "Model file not found. Add flower_classifier.h5 to the same "
-        "directory as streamlit_app.py, then restart the app."
+        "The model exists but could not be loaded."
     )
+
+    st.exception(
+        error
+    )
+
     st.stop()
+
+
+# ============================================================
+# 9. CHECK MODEL OUTPUT
+# ============================================================
 
 if model.output_shape[-1] != len(CLASS_NAMES):
+
     st.error(
-        f"Model output has {model.output_shape[-1]} classes, "
-        f"but class_names.json contains {len(CLASS_NAMES)} classes."
+
+        f"Model has "
+        f"{model.output_shape[-1]} outputs, "
+        f"but {len(CLASS_NAMES)} "
+        f"class names were provided."
+
     )
+
     st.stop()
 
 
 # ============================================================
-# MODEL INFORMATION
+# 10. MODEL INFORMATION
 # ============================================================
 
-with st.expander("Model information"):
-    st.write("Architecture: MobileNetV2 transfer learning")
-    st.write(f"Input shape: {model.input_shape}")
-    st.write(f"Output shape: {model.output_shape}")
-    st.write(f"Image size: {IMG_WIDTH} × {IMG_HEIGHT}")
-    st.write(f"Classes: {', '.join(CLASS_NAMES)}")
+with st.expander(
+    "Model information"
+):
+
+    st.write(
+        "Architecture: MobileNetV2"
+    )
+
+    st.write(
+        "Transfer learning: Feature Extraction"
+    )
+
+    st.write(
+        f"Input shape: {model.input_shape}"
+    )
+
+    st.write(
+        f"Output shape: {model.output_shape}"
+    )
+
+    st.write(
+        f"Image size: "
+        f"{IMG_WIDTH} × {IMG_HEIGHT}"
+    )
+
+    st.write(
+        "Classes:"
+    )
+
+    st.write(
+        CLASS_NAMES
+    )
 
 
 # ============================================================
-# FILE UPLOADER
+# 11. FILE UPLOADER
 # ============================================================
 
 uploaded_file = st.file_uploader(
-    "Upload an image",
-    type=["jpg", "jpeg", "png"],
+
+    "Upload a flower image",
+
+    type=[
+
+        "jpg",
+
+        "jpeg",
+
+        "png"
+
+    ]
+
 )
 
 
 # ============================================================
-# PREDICTION
+# 12. PROCESS UPLOADED IMAGE
 # ============================================================
 
 if uploaded_file is not None:
 
-    image = Image.open(uploaded_file).convert("RGB")
 
-    st.subheader("Uploaded image")
+    # ========================================================
+    # OPEN IMAGE
+    # ========================================================
+
+    image = Image.open(
+        uploaded_file
+    )
+
+
+    image = image.convert(
+        "RGB"
+    )
+
+
+    # ========================================================
+    # SHOW IMAGE
+    # ========================================================
+
+    st.subheader(
+        "Uploaded image"
+    )
+
 
     st.image(
+
         image,
+
         caption="Uploaded image",
-        use_container_width=True,
+
+        use_container_width=True
+
     )
 
-    # --------------------------------------------------------
-    # PREPROCESSING
-    # --------------------------------------------------------
-    #
-    # The saved training model already contains
-    # MobileNetV2 preprocess_input() inside the model graph.
-    #
-    # Therefore the Streamlit app only needs to:
-    #   1. convert to RGB
-    #   2. resize to 160 x 160
-    #   3. convert to float32
-    #   4. add the batch dimension
-    #
-    # --------------------------------------------------------
+
+    # ========================================================
+    # RESIZE IMAGE
+    # ========================================================
 
     resized_image = image.resize(
-        (IMG_WIDTH, IMG_HEIGHT)
+
+        (
+
+            IMG_WIDTH,
+
+            IMG_HEIGHT
+
+        )
+
     )
+
+
+    # ========================================================
+    # CONVERT TO NUMPY ARRAY
+    # ========================================================
 
     image_array = np.array(
+
         resized_image,
-        dtype=np.float32,
+
+        dtype=np.float32
+
     )
+
+
+    # ========================================================
+    # ADD BATCH DIMENSION
+    # ========================================================
+    #
+    # Before:
+    #
+    # (160, 160, 3)
+    #
+    # After:
+    #
+    # (1, 160, 160, 3)
+    #
+    # ========================================================
 
     image_batch = np.expand_dims(
+
         image_array,
-        axis=0,
+
+        axis=0
+
     )
 
-    with st.spinner("Running prediction..."):
+
+    # ========================================================
+    # DISPLAY PREPROCESSING INFORMATION
+    # ========================================================
+
+    with st.expander(
+        "Preprocessing information"
+    ):
+
+        st.write(
+            "Original image size:",
+            image.size
+        )
+
+        st.write(
+            "Resized image size:",
+            resized_image.size
+        )
+
+        st.write(
+            "Input tensor shape:",
+            image_batch.shape
+        )
+
+
+    # ========================================================
+    # RUN PREDICTION
+    # ========================================================
+    #
+    # IMPORTANT:
+    #
+    # preprocess_input() is already included inside
+    # the trained model.
+    #
+    # Therefore we DON'T call it here.
+    #
+    # ========================================================
+
+    with st.spinner(
+        "Running prediction..."
+    ):
+
         predictions = model.predict(
+
             image_batch,
-            verbose=0,
+
+            verbose=0
+
         )[0]
 
+
+    # ========================================================
+    # GET BEST CLASS
+    # ========================================================
+
     predicted_index = int(
-        np.argmax(predictions)
+
+        np.argmax(
+            predictions
+        )
+
     )
+
 
     predicted_class = CLASS_NAMES[
+
         predicted_index
+
     ]
 
+
     confidence = float(
-        predictions[predicted_index]
+
+        predictions[
+            predicted_index
+        ]
+
     )
 
-    # --------------------------------------------------------
-    # MAIN RESULT
-    # --------------------------------------------------------
+
+    # ========================================================
+    # DISPLAY RESULT
+    # ========================================================
 
     st.divider()
 
-    st.subheader("Prediction")
+
+    st.subheader(
+        "Prediction"
+    )
+
 
     st.success(
-        f"Predicted class: {predicted_class.upper()}"
+
+        f"Predicted flower: "
+        f"{predicted_class.upper()}"
+
     )
+
 
     st.metric(
-        "Confidence",
-        f"{confidence * 100:.2f}%",
+
+        label="Confidence",
+
+        value=(
+            f"{confidence * 100:.2f}%"
+        )
+
     )
 
-    # --------------------------------------------------------
-    # PROBABILITY TABLE
-    # --------------------------------------------------------
 
-    probability_df = pd.DataFrame(
+    # ========================================================
+    # CREATE PROBABILITY DATAFRAME
+    # ========================================================
+
+    probability_dataframe = pd.DataFrame(
+
         {
-            "Class": CLASS_NAMES,
-            "Probability (%)": predictions * 100,
+
+            "Flower":
+                CLASS_NAMES,
+
+            "Probability (%)":
+                predictions * 100
+
         }
-    ).sort_values(
-        "Probability (%)",
-        ascending=False,
+
     )
 
-    st.subheader("Class probabilities")
+
+    probability_dataframe = (
+        probability_dataframe
+        .sort_values(
+
+            by="Probability (%)",
+
+            ascending=False
+
+        )
+    )
+
+
+    # ========================================================
+    # DISPLAY TABLE
+    # ========================================================
+
+    st.subheader(
+        "Class probabilities"
+    )
+
 
     st.dataframe(
-        probability_df,
+
+        probability_dataframe,
+
         use_container_width=True,
-        hide_index=True,
+
+        hide_index=True
+
     )
 
-    # --------------------------------------------------------
-    # BAR CHART
-    # --------------------------------------------------------
 
-    chart_df = probability_df.set_index("Class")
+    # ========================================================
+    # DISPLAY CHART
+    # ========================================================
 
-    st.subheader("Probability chart")
+    st.subheader(
+        "Probability chart"
+    )
+
+
+    chart_dataframe = (
+        probability_dataframe
+        .set_index(
+            "Flower"
+        )
+    )
+
 
     st.bar_chart(
-        chart_df
+        chart_dataframe
     )
+
+
+# ============================================================
+# 13. NO IMAGE YET
+# ============================================================
 
 else:
+
     st.info(
-        "Upload a JPG, JPEG, or PNG image to start."
+
+        "Upload a JPG, JPEG or PNG image "
+        "to start prediction."
+
     )
 
+
+# ============================================================
+# 14. FOOTER
+# ============================================================
 
 st.divider()
 
+
 st.caption(
-    "Built with TensorFlow, MobileNetV2 and Streamlit."
+
+    "Built with TensorFlow, "
+    "MobileNetV2 and Streamlit."
+
 )
