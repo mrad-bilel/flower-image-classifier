@@ -4,3 +4,4 @@ numpy
 pandas
 Pillow
 h5py
+matplotlib
